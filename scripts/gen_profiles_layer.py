@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2021-2025 LunarG, Inc.
+# Copyright (c) 2021-2026 LunarG, Inc.
 # Copyright (c) 2023-2024 RasterGrid Kft.
 #
 # Licensed under the Apache License, Version 2.0 (the "License")
@@ -1241,6 +1241,14 @@ bool JsonLoader::GetQueueFamilyProperties(const char* device_name, const Json::V
             for (const auto &feature : props["optimalImageTransferToQueueFamilies"]) {
                 dest->ownership_transfer_properties_.optimalImageTransferToQueueFamilies |= feature.asUInt();
             }
+        } else if (name == "VkQueueFamilyOptimalImageTransferGranularityPropertiesKHR") {
+            const auto &optimalImageTransferGranularity = props["optimalImageTransferGranularity"];
+            dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width =
+                optimalImageTransferGranularity["width"].asUInt();
+            dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height =
+                optimalImageTransferGranularity["height"].asUInt();
+            dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth =
+                optimalImageTransferGranularity["depth"].asUInt();
         } else if (name == "VkQueueFamilyGlobalPriorityPropertiesKHR" || name == "VkQueueFamilyGlobalPriorityPropertiesEXT") {
             uint32_t i = 0;
             for (const auto &feature : props["priorities"]) {
@@ -1273,6 +1281,21 @@ bool JsonLoader::GetQueueFamilyProperties(const char* device_name, const Json::V
         }
         if ((device_qfp.ownership_transfer_properties_.optimalImageTransferToQueueFamilies & dest->ownership_transfer_properties_.optimalImageTransferToQueueFamilies) !=
              dest->ownership_transfer_properties_.optimalImageTransferToQueueFamilies) {
+            continue;
+        }
+        if (dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width > 0 &&
+            device_qfp.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width >
+                dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width) {
+            continue;
+        }
+        if (dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height > 0 &&
+            device_qfp.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height >
+                dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height) {
+            continue;
+        }
+        if (dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth > 0 &&
+            device_qfp.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth >
+                dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth) {
             continue;
         }
         if (!GlobalPriorityMatch(device_qfp.global_priority_properties_, dest->global_priority_properties_)) {
@@ -1311,6 +1334,15 @@ bool JsonLoader::GetQueueFamilyProperties(const char* device_name, const Json::V
         if (dest->ownership_transfer_properties_.optimalImageTransferToQueueFamilies > 0) {
             message += format(", VkQueueFamilyOwnershipTransferPropertiesKHR [optimalImageTransferToQueueFamilies: %" PRIu32 "]",
                               dest->ownership_transfer_properties_.optimalImageTransferToQueueFamilies);
+        }
+        if (dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width > 0 ||
+            dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height > 0 ||
+            dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth > 0) {
+            message += format(", VkQueueFamilyOptimalImageTransferGranularityPropertiesKHR [optimalImageTransferGranularity: [%" PRIu32
+                              ", %" PRIu32 ", %" PRIu32 "]]",
+                              dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width,
+                              dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height,
+                              dest->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth);
         }
         if (dest->global_priority_properties_.priorityCount > 0) {
             std::string priorities = "[";
@@ -1358,6 +1390,21 @@ bool QueueFamilyAndExtensionsMatch(const QueueFamilyProperties &device, const Qu
          profile.ownership_transfer_properties_.optimalImageTransferToQueueFamilies) {
         return false;
     }
+    if (profile.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width > 0 &&
+        device.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width >
+            profile.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width) {
+        return false;
+    }
+    if (profile.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height > 0 &&
+        device.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height >
+            profile.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height) {
+        return false;
+    }
+    if (profile.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth > 0 &&
+        device.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth >
+            profile.optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth) {
+        return false;
+    }
     if (!GlobalPriorityMatch(device.global_priority_properties_, profile.global_priority_properties_)) {
         return false;
     }
@@ -1403,6 +1450,18 @@ void CopyUnsetQueueFamilyProperties(const QueueFamilyProperties *device, QueueFa
     if (profile->properties_2.queueFamilyProperties.minImageTransferGranularity.depth == 0) {
         profile->properties_2.queueFamilyProperties.minImageTransferGranularity.depth =
             device->properties_2.queueFamilyProperties.minImageTransferGranularity.depth;
+    }
+    if (profile->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width == 0) {
+        profile->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width =
+            device->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.width;
+    }
+    if (profile->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height == 0) {
+        profile->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height =
+            device->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.height;
+    }
+    if (profile->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth == 0) {
+        profile->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth =
+            device->optimal_image_transfer_granularity_properties_.optimalImageTransferGranularity.depth;
     }
 }
 
@@ -2509,19 +2568,29 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties(VkPhysicalDevice physical
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice,
-                                                        VkPhysicalDeviceProperties2KHR *pProperties) {
+void GetPhysicalDeviceProperties2Impl(VkPhysicalDevice physicalDevice,
+                                      VkPhysicalDeviceProperties2KHR *pProperties,
+                                      bool core) {
     std::lock_guard<std::recursive_mutex> lock(global_lock);
     const auto dt = instance_dispatch_table(physicalDevice);
-    dt->GetPhysicalDeviceProperties2(physicalDevice, pProperties);
+    if (core) {
+        dt->GetPhysicalDeviceProperties2(physicalDevice, pProperties);
+    } else {
+        dt->GetPhysicalDeviceProperties2KHR(physicalDevice, pProperties);
+    }
     GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
     PhysicalDeviceData *pdd = PhysicalDeviceData::Find(physicalDevice);
     FillPNextChain(pdd, pProperties->pNext);
 }
 
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice,
+                                                        VkPhysicalDeviceProperties2KHR *pProperties) {
+    GetPhysicalDeviceProperties2Impl(physicalDevice, pProperties, true);
+}
+
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHR(VkPhysicalDevice physicalDevice,
                                                            VkPhysicalDeviceProperties2KHR *pProperties) {
-    GetPhysicalDeviceProperties2(physicalDevice, pProperties);
+    GetPhysicalDeviceProperties2Impl(physicalDevice, pProperties, false);
 }
 
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures *pFeatures) {
@@ -2536,7 +2605,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDe
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2KHR *pFeatures) {
+void GetPhysicalDeviceFeatures2Impl(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2KHR *pFeatures, bool core) {
     std::lock_guard<std::recursive_mutex> lock(global_lock);
     const auto dt = instance_dispatch_table(physicalDevice);
 
@@ -2544,18 +2613,30 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2(VkPhysicalDevice physicalD
     if (pdd) {
         ProfileLayerSettings *layer_settings = &JsonLoader::Find(pdd->instance())->layer_settings;
         if (layer_settings->simulate.unknown_feature_values == UNKNOWN_FEATURE_VALUES_DEVICE) {
-            dt->GetPhysicalDeviceFeatures2(physicalDevice, pFeatures);
+            if (core) {
+                dt->GetPhysicalDeviceFeatures2(physicalDevice, pFeatures);
+            } else {
+                dt->GetPhysicalDeviceFeatures2KHR(physicalDevice, pFeatures);
+            }
         }
         FillPNextChain(pdd, pFeatures->pNext);
     } else {
-        dt->GetPhysicalDeviceFeatures2(physicalDevice, pFeatures);
+        if (core) {
+            dt->GetPhysicalDeviceFeatures2(physicalDevice, pFeatures);
+        } else {
+            dt->GetPhysicalDeviceFeatures2KHR(physicalDevice, pFeatures);
+        }
     }
 
     GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
 }
 
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2KHR *pFeatures) {
+    GetPhysicalDeviceFeatures2Impl(physicalDevice, pFeatures, true);
+}
+
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2KHR *pFeatures) {
-    GetPhysicalDeviceFeatures2(physicalDevice, pFeatures);
+    GetPhysicalDeviceFeatures2Impl(physicalDevice, pFeatures, false);
 }
 '''
 
@@ -2641,9 +2722,10 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevi
     *pQueueFamilyPropertyCount = copy_count;
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysicalDevice physicalDevice,
-                                                                      uint32_t *pQueueFamilyPropertyCount,
-                                                                      VkQueueFamilyProperties2KHR *pQueueFamilyProperties2) {
+void GetPhysicalDeviceQueueFamilyProperties2Impl(VkPhysicalDevice physicalDevice,
+                                                 uint32_t *pQueueFamilyPropertyCount,
+                                                 VkQueueFamilyProperties2KHR *pQueueFamilyProperties2,
+                                                 bool core) {
     std::lock_guard<std::recursive_mutex> lock(global_lock);
     const auto dt = instance_dispatch_table(physicalDevice);
 
@@ -2651,7 +2733,11 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
     PhysicalDeviceData *pdd = PhysicalDeviceData::Find(physicalDevice);
     const uint32_t src_count = (pdd) ? static_cast<uint32_t>(pdd->arrayof_queue_family_properties_.size()) : 0;
     if (src_count == 0) {
-        dt->GetPhysicalDeviceQueueFamilyProperties2(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties2);
+        if (core) {
+            dt->GetPhysicalDeviceQueueFamilyProperties2(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties2);
+        } else {
+            dt->GetPhysicalDeviceQueueFamilyProperties2KHR(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties2);
+        }
         return;
     }
 
@@ -2670,10 +2756,16 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
     FillQueueFamilyPropertiesPNextChain(pdd, pQueueFamilyProperties2, copy_count);
 }
 
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysicalDevice physicalDevice,
+                                                                      uint32_t *pQueueFamilyPropertyCount,
+                                                                      VkQueueFamilyProperties2KHR *pQueueFamilyProperties2) {
+    GetPhysicalDeviceQueueFamilyProperties2Impl(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties2, false);
+}
+
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2(VkPhysicalDevice physicalDevice,
                                                                    uint32_t *pQueueFamilyPropertyCount,
                                                                    VkQueueFamilyProperties2KHR *pQueueFamilyProperties2) {
-    GetPhysicalDeviceQueueFamilyProperties2KHR(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties2);
+    GetPhysicalDeviceQueueFamilyProperties2Impl(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties2, true);
 }
 '''
 
@@ -2731,19 +2823,28 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties(VkPhysicalDevice ph
     LogFlush(layer_settings);
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2(VkPhysicalDevice physicalDevice, VkFormat format,
-                                                              VkFormatProperties2KHR *pFormatProperties) {
+void GetPhysicalDeviceFormatProperties2Impl(VkPhysicalDevice physicalDevice, VkFormat format,
+                                            VkFormatProperties2KHR *pFormatProperties, bool core) {
     std::lock_guard<std::recursive_mutex> lock(global_lock);
     const auto dt = instance_dispatch_table(physicalDevice);
-    dt->GetPhysicalDeviceFormatProperties2(physicalDevice, format, pFormatProperties);
+    if (core) {
+        dt->GetPhysicalDeviceFormatProperties2(physicalDevice, format, pFormatProperties);
+    } else {
+        dt->GetPhysicalDeviceFormatProperties2KHR(physicalDevice, format, pFormatProperties);
+    }
     GetPhysicalDeviceFormatProperties(physicalDevice, format, &pFormatProperties->formatProperties);
     PhysicalDeviceData *pdd = PhysicalDeviceData::Find(physicalDevice);
     FillFormatPropertiesPNextChain(pdd, pFormatProperties->pNext, format);
 }
 
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2(VkPhysicalDevice physicalDevice, VkFormat format,
+                                                              VkFormatProperties2KHR *pFormatProperties) {
+    GetPhysicalDeviceFormatProperties2Impl(physicalDevice, format, pFormatProperties, true);
+}
+
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevice physicalDevice, VkFormat format,
                                                                  VkFormatProperties2KHR *pFormatProperties) {
-    GetPhysicalDeviceFormatProperties2(physicalDevice, format, pFormatProperties);
+    GetPhysicalDeviceFormatProperties2Impl(physicalDevice, format, pFormatProperties, false);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format,
@@ -2776,9 +2877,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties(VkPhysical
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
+VkResult GetPhysicalDeviceImageFormatProperties2Impl(
     VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHR *pImageFormatInfo,
-    VkImageFormatProperties2KHR *pImageFormatProperties) {
+    VkImageFormatProperties2KHR *pImageFormatProperties, bool core) {
     std::lock_guard<std::recursive_mutex> lock(global_lock);
     const auto dt = instance_dispatch_table(physicalDevice);
 
@@ -2832,13 +2933,22 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
         }
     }
 
-    return dt->GetPhysicalDeviceImageFormatProperties2(physicalDevice, pImageFormatInfo, pImageFormatProperties);
+    if (core) {
+        return dt->GetPhysicalDeviceImageFormatProperties2(physicalDevice, pImageFormatInfo, pImageFormatProperties);
+    }
+    return dt->GetPhysicalDeviceImageFormatProperties2KHR(physicalDevice, pImageFormatInfo, pImageFormatProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHR *pImageFormatInfo,
+    VkImageFormatProperties2KHR *pImageFormatProperties) {
+    return GetPhysicalDeviceImageFormatProperties2Impl(physicalDevice, pImageFormatInfo, pImageFormatProperties, false);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2(VkPhysicalDevice physicalDevice,
                                                                        const VkPhysicalDeviceImageFormatInfo2 *pImageFormatInfo,
                                                                        VkImageFormatProperties2 *pImageFormatProperties) {
-    return GetPhysicalDeviceImageFormatProperties2KHR(physicalDevice, pImageFormatInfo, pImageFormatProperties);
+    return GetPhysicalDeviceImageFormatProperties2Impl(physicalDevice, pImageFormatInfo, pImageFormatProperties, true);
 }
 '''
 
@@ -3043,6 +3153,11 @@ void LoadQueueFamilyProperties(VkInstance instance, VkPhysicalDevice pd, Physica
 
                 pNext[i] = &pdd->device_queue_family_properties_[i].ownership_transfer_properties_;
             }
+            if (PhysicalDeviceData::HasExtension(pdd, VK_KHR_MAINTENANCE_11_EXTENSION_NAME)) {
+                pdd->device_queue_family_properties_[i].optimal_image_transfer_granularity_properties_.pNext = pNext[i];
+
+                pNext[i] = &pdd->device_queue_family_properties_[i].optimal_image_transfer_granularity_properties_;
+            }
             if (PhysicalDeviceData::HasExtension(pdd, VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME)) {
                 pdd->device_queue_family_properties_[i].global_priority_properties_.pNext = pNext[i];
 
@@ -3188,96 +3303,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
 
         if (result != VK_SUCCESS) {
             return result;
-        }
-
-        if (layer_settings->device.force_device != FORCE_DEVICE_OFF && *pPhysicalDeviceCount == 1) {
-            LogMessage(layer_settings, DEBUG_REPORT_NOTIFICATION_BIT, "Forced physical device is disabled because a single physical device was found.\\n");
-            layer_settings->device.force_device = FORCE_DEVICE_OFF;
-        }
-
-        switch (layer_settings->device.force_device) {
-            default:
-            case FORCE_DEVICE_OFF: {
-                break;
-            }
-            case FORCE_DEVICE_WITH_UUID: {
-                bool found = false;
-                for (std::size_t i = 0, n = physical_devices.size(); i < n; ++i) {
-                    VkPhysicalDeviceIDPropertiesKHR properties_deviceid{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHR};
-                    VkPhysicalDeviceProperties2 properties2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &properties_deviceid};
-
-                    dt->GetPhysicalDeviceProperties2(physical_devices[i], &properties2);
-
-                    if (layer_settings->device.force_device_uuid == GetUUIDString(properties_deviceid.deviceUUID)) {
-                        layer_settings->device.force_device_name = properties2.properties.deviceName;
-                        *pPhysicalDevices = physical_devices[i];
-                        found = true;
-                        break;
-                    }
-                }
-
-                static bool force_physical_device_log_once = false;
-                if (found) {
-                    *pPhysicalDeviceCount = 1;
-
-                    std::vector<VkPhysicalDevice> physical_devices_tmp;
-                    physical_devices_tmp.push_back(*pPhysicalDevices);
-                    std::swap(physical_devices, physical_devices_tmp);
-
-                    if (!force_physical_device_log_once) {
-                        LogMessage(layer_settings, DEBUG_REPORT_NOTIFICATION_BIT,
-                            "Force physical device by device UUID: '%s'('%s').\\n",
-                            layer_settings->device.force_device_uuid.c_str(),
-                            layer_settings->device.force_device_name.c_str());
-                    }
-                } else {
-                    if (!force_physical_device_log_once) {
-                        LogMessage(layer_settings, DEBUG_REPORT_ERROR_BIT,
-                            "Force physical device by device UUID is active but the requested physical device '%s'('%s') couldn't be found.\\n",
-                            layer_settings->device.force_device_uuid.c_str(),
-                            layer_settings->device.force_device_name.c_str());
-                    }
-                }
-                force_physical_device_log_once = true;
-                break;
-            }
-            case FORCE_DEVICE_WITH_NAME: {
-                bool found = false;
-                for (std::size_t i = 0, n = physical_devices.size(); i < n; ++i) {
-                    VkPhysicalDeviceProperties physical_device_properties;
-                    dt->GetPhysicalDeviceProperties(physical_devices[i], &physical_device_properties);
-
-                    if (layer_settings->device.force_device_name == physical_device_properties.deviceName) {
-                        *pPhysicalDevices = physical_devices[i];
-                        found = true;
-                        break;
-                    }
-                }
-
-                static bool force_physical_device_log_once = false;
-                if (found) {
-                    *pPhysicalDeviceCount = 1;
-
-                    std::vector<VkPhysicalDevice> physical_devices_tmp;
-                    physical_devices_tmp.push_back(*pPhysicalDevices);
-                    std::swap(physical_devices, physical_devices_tmp);
-
-                    if (!force_physical_device_log_once) {
-                        LogMessage(layer_settings, DEBUG_REPORT_NOTIFICATION_BIT,
-                            "Force physical device by device name: '%s'.\\n",
-                            layer_settings->device.force_device_name.c_str());
-                    }
-                }
-                else {
-                    if (!force_physical_device_log_once) {
-                        LogMessage(layer_settings, DEBUG_REPORT_ERROR_BIT,
-                            "Force physical device by device name is active but the requested physical device '%s' couldn't be found.\\n",
-                            layer_settings->device.force_device_name.c_str());
-                    }
-                }
-                force_physical_device_log_once = true;
-                break;
-            }
         }
 
         // For each physical device, create and populate a PDD instance.
@@ -4087,6 +4112,64 @@ class VulkanProfilesLayerGenerator():
 
         return gen
 
+    def generate_video_limit_struct_member(self, indent, member, inheritedLimittype = None):
+        gen = ''
+
+        if member.limittype:
+            limittype = self.get_limittype_class(member.limittype)
+        else:
+            limittype = inheritedLimittype
+
+        if member.type in self.registry.structs:
+            nestedStructDef = self.registry.structs[member.type]
+            gen += indent + 'struct {\n'
+            for nestedMember in nestedStructDef.members.values():
+                gen += self.generate_video_limit_struct_member(' ' * 4 + indent, nestedMember, limittype)
+            gen += indent + '}} {0}{{}};\n'.format(member.name)
+        else:
+            gen += indent + '{0}<{1}> {2}{{}};\n'.format(limittype, member.type, member.name)
+
+        return gen
+
+    def generate_video_limit_struct_member_parser(self, indent, jsonValue, structVar, struct, member):
+        gen = ''
+
+        memberVar = '{0}.{1}'.format(structVar, member.name)
+
+        if member.type in self.registry.enums:
+            gen += indent + 'if (!{0}.isString()) return false;\n'.format(jsonValue)
+            gen += indent + '{0}.limit = static_cast<{1}>(VkStringToUint64({2}.asString()));\n'.format(memberVar, member.type, jsonValue)
+        elif member.type in self.registry.bitmasks:
+            gen += indent + 'if (!{0}.isArray()) return false;\n'.format(jsonValue)
+            gen += indent + 'uint64_t mask = 0;\n'
+            gen += indent + 'for (const auto &entry : {0}) {{\n'.format(jsonValue)
+            gen += indent + '    mask |= VkStringToUint64(entry.asString());\n'
+            gen += indent + '}\n'
+            gen += indent + '{0}.limit = static_cast<{1}>(mask);\n'.format(memberVar, member.type)
+        elif member.type == 'VkBool32':
+            gen += indent + 'if (!{0}.isBool()) return false;\n'.format(jsonValue)
+            gen += indent + '{0}.limit = {1}.asBool() ? VK_TRUE : VK_FALSE;\n'.format(memberVar, jsonValue)
+        elif member.type == 'float':
+            gen += indent + 'if (!{0}.isDouble()) return false;\n'.format(jsonValue)
+            gen += indent + '{0}.limit = {1}.asFloat();\n'.format(memberVar, jsonValue)
+        elif member.type in self.int_to_json_type_map:
+            intType = self.int_to_json_type_map[member.type]
+            gen += indent + 'if (!{0}.is{1}()) return false;\n'.format(jsonValue, intType)
+            gen += indent + '{0}.limit = {1}.as{2}();\n'.format(memberVar, jsonValue, intType)
+        elif member.type in self.registry.structs:
+            nestedStructDef = self.registry.structs[member.type]
+            gen += indent + 'if (!{0}.isObject()) return false;\n'.format(jsonValue)
+            for nestedMember in nestedStructDef.members.values():
+                jsonSubValue = '{0}_{1}'.format(jsonValue, nestedMember.name)
+                gen += indent + 'if ({0}.isMember("{1}")) {{\n'.format(jsonValue, nestedMember.name)
+                gen += indent + '    const Json::Value &{0} = {1}["{2}"];\n'.format(jsonSubValue, jsonValue, nestedMember.name)
+                gen += self.generate_video_limit_struct_member_parser(' ' * 4 + indent, jsonSubValue, memberVar, nestedMember.type, nestedMember)
+                gen += indent + '}\n'
+        else:
+            gen += '#error Unsupported video limit type type "{0}" in "{1}::{2}"\n'.format(member.type, struct, member.name)
+
+        return gen
+
     def generate_video_profile_caps(self):
         structs = self.get_video_structs('VkVideoCapabilitiesKHR')
 
@@ -4225,22 +4308,14 @@ class VulkanProfilesLayerGenerator():
             gen += self.generate_platform_protect_begin(struct)
             gen += '    struct {\n'
             for member in structDef.members.values():
-                limittype = self.get_limittype_class(member.limittype)
                 if member.name == 'stdHeaderVersion' and member.type == 'VkExtensionProperties':
                     # stdHeaderVersion is a special case
                     gen += '        struct {\n'
                     gen += '            LimitExact<std::string> extensionName{};\n'
                     gen += '            LimitExact<uint32_t> specVersion{};\n'
                     gen += '        } stdHeaderVersion{};\n'
-                elif member.type in self.registry.structs:
-                    # Structure members need to be expanded
-                    nestedStructDef = self.registry.structs[member.type]
-                    gen += '        struct {\n'
-                    for nestedMember in nestedStructDef.members.values():
-                        gen += '            {0}<{1}> {2}{{}};\n'.format(limittype, nestedMember.type, nestedMember.name)
-                    gen += '        }} {0}{{}};\n'.format(member.name)
                 else:
-                    gen += '        {0}<{1}> {2}{{}};\n'.format(limittype, member.type, member.name)
+                    gen += self.generate_video_limit_struct_member(' ' * 8, member)
             gen += '    }} {0}{{}};\n'.format(self.create_var_name(struct))
             gen += self.generate_platform_protect_end(struct)
 
@@ -4262,24 +4337,7 @@ class VulkanProfilesLayerGenerator():
             for member in structDef.members.values():
                 gen += '            if ({0}json->isMember("{1}")) {{\n'.format(structVar, member.name)
                 gen += '                const Json::Value &value = (*{0}json)["{1}"];\n'.format(structVar, member.name)
-                if member.type in self.registry.enums:
-                    gen += '                if (!value.isString()) return false;\n'
-                    gen += '                {0}.{1}.limit = static_cast<{2}>(VkStringToUint64(value.asString()));\n'.format(structVar, member.name, member.type)
-                elif member.type in self.registry.bitmasks:
-                    gen += '                if (!value.isArray()) return false;\n'
-                    gen += '                uint64_t mask = 0;\n'
-                    gen += '                for (const auto &entry : value) {\n'
-                    gen += '                    mask |= VkStringToUint64(entry.asString());\n'
-                    gen += '                }\n'
-                    gen += '                {0}.{1}.limit = static_cast<{2}>(mask);\n'.format(structVar, member.name, member.type)
-                elif member.type == 'VkBool32':
-                    gen += '                if (!value.isBool()) return false;\n'
-                    gen += '                {0}.{1}.limit = value.asBool() ? VK_TRUE : VK_FALSE;\n'.format(structVar, member.name)
-                elif member.type in self.int_to_json_type_map:
-                    intType = self.int_to_json_type_map[member.type]
-                    gen += '                if (!value.is{0}()) return false;\n'.format(intType)
-                    gen += '                {0}.{1}.limit = value.as{2}();\n'.format(structVar, member.name, intType)
-                elif member.name == 'stdHeaderVersion' and member.type == 'VkExtensionProperties':
+                if member.name == 'stdHeaderVersion' and member.type == 'VkExtensionProperties':
                     # stdHeaderVersion is a special case
                     gen += '                if (!value.isObject()) return false;\n'
                     gen += '                if (value.isMember("extensionName")) {\n'
@@ -4292,24 +4350,8 @@ class VulkanProfilesLayerGenerator():
                     gen += '                    if (!std_header_version.isUInt()) return false;\n'
                     gen += '                    {0}.stdHeaderVersion.specVersion.limit = std_header_version.asUInt();\n'.format(structVar)
                     gen += '                }\n'
-                elif member.type in self.registry.structs:
-                    nestedStructDef = self.registry.structs[member.type]
-                    gen += '                if (!value.isObject()) return false;\n'
-                    for nestedMember in nestedStructDef.members.values():
-                        gen += '                if (value.isMember("{0}")) {{\n'.format(nestedMember.name)
-                        gen += '                    const Json::Value &nested_value = value["{0}"];\n'.format(nestedMember.name)
-                        if nestedMember.type in self.registry.enums:
-                            gen += '                    if (!nested_value.isString()) return false;\n'
-                            gen += '                    {0}.{1}.{2}.limit = static_cast<{3}>(VkStringToUint64(nested_value.asString()));\n'.format(structVar, member.name, nestedMember.name, nestedMember.type)
-                        elif nestedMember.type in self.int_to_json_type_map:
-                            intType = self.int_to_json_type_map[nestedMember.type]
-                            gen += '                    if (!nested_value.is{0}()) return false;\n'.format(intType)
-                            gen += '                    {0}.{1}.{2}.limit = nested_value.as{3}();\n'.format(structVar, member.name, nestedMember.name, intType)
-                        else:
-                            gen += '#error Unsupported video profile capability type "{0}" in "{1}::{2}::{3}"\n'.format(nestedMember.type, struct, member.name, nestedMember.name)
-                        gen += '                }\n'
                 else:
-                    gen += '#error Unsupported video profile capability type "{0}" in "{1}::{2}"\n'.format(member.type, struct, member.name)
+                    gen += self.generate_video_limit_struct_member_parser(' ' * 16, 'value', structVar, struct, member)
                 gen += '            }\n'
             gen += '        }\n'
             gen += self.generate_platform_protect_end(struct)
@@ -4333,19 +4375,22 @@ class VulkanProfilesLayerGenerator():
             structDef = self.registry.structs[struct]
             gen += self.generate_platform_protect_begin(struct)
             for member in structDef.members.values():
-                if member.type in self.registry.structs:
-                    # Structure members need to be expanded
-                    nestedStructDef = self.registry.structs[member.type]
-                    for nestedMember in nestedStructDef.members.values():
-                        gen += '        if (caps.{0}.{1}.{2}.limit.has_value() && !{0}.{1}.{2}.Combine(caps.{0}.{1}.{2}.limit.value())) {{\n'.format(structVar, member.name, nestedMember.name)
-                        gen += '            LogMessage(layer_settings, DEBUG_REPORT_ERROR_BIT, error_msg, "{0}::{1}::{2}");\n'.format(struct, member.name, nestedMember.name)
+                def gen_member(member, structVar, struct):
+                    gen = ''
+                    if member.type in self.registry.structs:
+                        memberVar = '{0}.{1}'.format(structVar, member.name)
+                        memberTypeStr = '{0}::{1}'.format(struct, member.type)
+                        nestedStructDef = self.registry.structs[member.type]
+                        for nestedMember in nestedStructDef.members.values():
+                            gen += gen_member(nestedMember, memberVar, memberTypeStr)
+                    else:
+                        gen += '        if (caps.{0}.{1}.limit.has_value() && !{0}.{1}.Combine(caps.{0}.{1}.limit.value())) {{\n'.format(structVar, member.name)
+                        gen += '            LogMessage(layer_settings, DEBUG_REPORT_ERROR_BIT, error_msg, "{0}::{1}");\n'.format(struct, member.name)
                         gen += '            result = false;\n'
                         gen += '        }\n'
-                else:
-                    gen += '        if (caps.{0}.{1}.limit.has_value() && !{0}.{1}.Combine(caps.{0}.{1}.limit.value())) {{\n'.format(structVar, member.name)
-                    gen += '            LogMessage(layer_settings, DEBUG_REPORT_ERROR_BIT, error_msg, "{0}::{1}");\n'.format(struct, member.name)
-                    gen += '            result = false;\n'
-                    gen += '        }\n'
+                    return gen
+
+                gen += gen_member(member, structVar, struct)
             gen += self.generate_platform_protect_end(struct)
         gen += '        return result;\n'
         gen += '    }\n'
@@ -4359,31 +4404,38 @@ class VulkanProfilesLayerGenerator():
             structDef = self.registry.structs[struct]
             gen += self.generate_platform_protect_begin(struct)
             gen += '        if (caps.{0}.sType == {1}) {{\n'.format(structVar, structDef.sType)
-            indent = ' ' * 12
             for member in structDef.members.values():
-                if member.type in self.registry.structs:
-                    # Structure members need to be expanded
-                    nestedStructDef = self.registry.structs[member.type]
-                    for nestedMember in nestedStructDef.members.values():
-                        if member.name == 'stdHeaderVersion' and member.type == 'VkExtensionProperties' and nestedMember.name == 'extensionName':
-                            # stdHeaderVersion.extensionName is a special case
-                            gen += '{0}if ({1}.{2}.{3}.limit.has_value() && strncmp({1}.{2}.{3}.limit.value().c_str(), caps.{1}.{2}.{3}, VK_MAX_EXTENSION_NAME_SIZE - 1) != 0) {{\n'.format(indent, structVar, member.name, nestedMember.name)
-                            gen += '{0}    memset(caps.{1}.{2}.{3}, 0, VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
-                            gen += '{0}    strncpy(caps.{1}.{2}.{3}, {1}.{2}.{3}.limit.value().c_str(), VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
-                        else:
-                            gen += '{0}if (!{1}.{2}.{3}.Override(caps.{1}.{2}.{3})) {{\n'.format(indent, structVar, member.name, nestedMember.name)
+                def gen_member(member, structVar, struct):
+                    indent = ' ' * 12
+                    gen = ''
+                    if member.type in self.registry.structs:
+                        memberVar = '{0}.{1}'.format(structVar, member.name)
+                        memberTypeStr = '{0}::{1}'.format(struct, member.type)
+                        nestedStructDef = self.registry.structs[member.type]
+                        for nestedMember in nestedStructDef.members.values():
+                            if member.name == 'stdHeaderVersion' and member.type == 'VkExtensionProperties' and nestedMember.name == 'extensionName':
+                                # stdHeaderVersion.extensionName is a special case
+                                gen += '{0}if ({1}.{2}.{3}.limit.has_value() && strncmp({1}.{2}.{3}.limit.value().c_str(), caps.{1}.{2}.{3}, VK_MAX_EXTENSION_NAME_SIZE - 1) != 0) {{\n'.format(indent, structVar, member.name, nestedMember.name)
+                                gen += '{0}    memset(caps.{1}.{2}.{3}, 0, VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
+                                gen += '{0}    strncpy(caps.{1}.{2}.{3}, {1}.{2}.{3}.limit.value().c_str(), VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
+                                gen += '{0}    if (enable_warnings) {{\n'.format(indent)
+                                gen += '{0}        LogMessage(layer_settings, DEBUG_REPORT_WARNING_BIT, warn_msg, "{1}::{2}::{3}", name);\n'.format(indent, struct, member.name, nestedMember.name)
+                                gen += '{0}        result = false;\n'.format(indent)
+                                gen += '{0}    }}\n'.format(indent)
+                                gen += '{0}}}\n'.format(indent)
+                            else:
+                                gen += gen_member(nestedMember, memberVar, memberTypeStr)
+                    else:
+                        gen += '{0}if (!{1}.{2}.Override(caps.{1}.{2})) {{\n'.format(indent, structVar, member.name)
                         gen += '{0}    if (enable_warnings) {{\n'.format(indent)
-                        gen += '{0}        LogMessage(layer_settings, DEBUG_REPORT_WARNING_BIT, warn_msg, "{1}::{2}::{3}", name);\n'.format(indent, struct, member.name, nestedMember.name)
+                        gen += '{0}        LogMessage(layer_settings, DEBUG_REPORT_WARNING_BIT, warn_msg, "{1}::{2}", name);\n'.format(indent, struct, member.name)
                         gen += '{0}        result = false;\n'.format(indent)
                         gen += '{0}    }}\n'.format(indent)
                         gen += '{0}}}\n'.format(indent)
-                else:
-                    gen += '{0}if (!{1}.{2}.Override(caps.{1}.{2})) {{\n'.format(indent, structVar, member.name)
-                    gen += '{0}    if (enable_warnings) {{\n'.format(indent)
-                    gen += '{0}        LogMessage(layer_settings, DEBUG_REPORT_WARNING_BIT, warn_msg, "{1}::{2}", name);\n'.format(indent, struct, member.name)
-                    gen += '{0}        result = false;\n'.format(indent)
-                    gen += '{0}    }}\n'.format(indent)
-                    gen += '{0}}}\n'.format(indent)
+                    return gen
+
+                gen += gen_member(member, structVar, struct)
+
             gen += '        }\n'
             gen += self.generate_platform_protect_end(struct)
         gen += '        return result;\n'
@@ -4397,22 +4449,29 @@ class VulkanProfilesLayerGenerator():
             gen += self.generate_platform_protect_begin(struct)
             gen += '        if (caps.{0}.sType == {1}) {{\n'.format(structVar, structDef.sType)
             gen += '            caps.{0} = {{caps.{0}.sType, caps.{0}.pNext}};\n'.format(structVar)
-            indent = ' ' * 12
             for member in structDef.members.values():
-                if member.type in self.registry.structs:
-                    # Structure members need to be expanded
-                    nestedStructDef = self.registry.structs[member.type]
-                    for nestedMember in nestedStructDef.members.values():
-                        if member.name == 'stdHeaderVersion' and member.type == 'VkExtensionProperties' and nestedMember.name == 'extensionName':
-                            # stdHeaderVersion.extensionName is a special case
-                            gen += '{0}if ({1}.{2}.{3}.limit.has_value()) {{\n'.format(indent, structVar, member.name, nestedMember.name)
-                            gen += '{0}    memset(caps.{1}.{2}.{3}, 0, VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
-                            gen += '{0}    strncpy(caps.{1}.{2}.{3}, {1}.{2}.{3}.limit.value().c_str(), VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
-                            gen += '{0}}}\n'.format(indent)
-                        else:
-                            gen += '{0}if ({1}.{2}.{3}.limit.has_value()) caps.{1}.{2}.{3} = {1}.{2}.{3}.limit.value();\n'.format(indent, structVar, member.name, nestedMember.name)
-                else:
-                    gen += '{0}if ({1}.{2}.limit.has_value()) caps.{1}.{2} = {1}.{2}.limit.value();\n'.format(indent, structVar, member.name)
+                def gen_member(member, structVar, struct):
+                    indent = ' ' * 12
+                    gen = ''
+                    if member.type in self.registry.structs:
+                        memberVar = '{0}.{1}'.format(structVar, member.name)
+                        memberTypeStr = '{0}::{1}'.format(struct, member.type)
+                        nestedStructDef = self.registry.structs[member.type]
+                        for nestedMember in nestedStructDef.members.values():
+                            if member.name == 'stdHeaderVersion' and member.type == 'VkExtensionProperties' and nestedMember.name == 'extensionName':
+                                # stdHeaderVersion.extensionName is a special case
+                                gen += '{0}if ({1}.{2}.{3}.limit.has_value()) {{\n'.format(indent, structVar, member.name, nestedMember.name)
+                                gen += '{0}    memset(caps.{1}.{2}.{3}, 0, VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
+                                gen += '{0}    strncpy(caps.{1}.{2}.{3}, {1}.{2}.{3}.limit.value().c_str(), VK_MAX_EXTENSION_NAME_SIZE - 1);\n'.format(indent, structVar, member.name, nestedMember.name)
+                                gen += '{0}}}\n'.format(indent)
+                            else:
+                                gen += gen_member(nestedMember, memberVar, memberTypeStr)
+                    else:
+                        gen += '{0}if ({1}.{2}.limit.has_value()) caps.{1}.{2} = {1}.{2}.limit.value();\n'.format(indent, structVar, member.name)
+                    return gen
+
+                gen += gen_member(member, structVar, struct)
+
             gen += '        }\n'
             gen += self.generate_platform_protect_end(struct)
         gen += '    }\n'
@@ -4630,16 +4689,7 @@ class VulkanProfilesLayerGenerator():
             gen += '    bool {0}defined_{{false}};\n'.format(structVar)
             gen += '    struct {\n'
             for member in structDef.members.values():
-                limittype = self.get_limittype_class(member.limittype)
-                if member.type in self.registry.structs:
-                    # Structure members need to be expanded
-                    nestedStructDef = self.registry.structs[member.type]
-                    gen += '        struct {\n'
-                    for nestedMember in nestedStructDef.members.values():
-                        gen += '            {0}<{1}> {2}{{}};\n'.format(limittype, nestedMember.type, nestedMember.name)
-                    gen += '        }} {0}{{}};\n'.format(member.name)
-                else:
-                    gen += '        {0}<{1}> {2}{{}};\n'.format(limittype, member.type, member.name)
+                gen += self.generate_video_limit_struct_member(' ' * 8, member)
             gen += '    }} {0}{{}};\n'.format(structVar)
             gen += self.generate_platform_protect_end(struct)
 
@@ -4659,41 +4709,7 @@ class VulkanProfilesLayerGenerator():
             for member in structDef.members.values():
                 gen += '            if ({0}json->isMember("{1}")) {{\n'.format(structVar, member.name)
                 gen += '                const Json::Value &value = (*{0}json)["{1}"];\n'.format(structVar, member.name)
-                if member.type in self.registry.enums:
-                    gen += '                if (!value.isString()) return false;\n'
-                    gen += '                {0}.{1}.limit = static_cast<{2}>(VkStringToUint64(value.asString()));\n'.format(structVar, member.name, member.type)
-                elif member.type in self.registry.bitmasks:
-                    gen += '                if (!value.isArray()) return false;\n'
-                    gen += '                uint64_t mask = 0;\n'
-                    gen += '                for (const auto &entry : value) {\n'
-                    gen += '                    mask |= VkStringToUint64(entry.asString());\n'
-                    gen += '                }\n'
-                    gen += '                {0}.{1}.limit = static_cast<{2}>(mask);\n'.format(structVar, member.name, member.type)
-                elif member.type == 'VkBool32':
-                    gen += '                if (!value.isBool()) return false;\n'
-                    gen += '                {0}.{1}.limit = value.asBool() ? VK_TRUE : VK_FALSE;\n'.format(structVar, member.name)
-                elif member.type in self.int_to_json_type_map:
-                    intType = self.int_to_json_type_map[member.type]
-                    gen += '                if (!value.is{0}()) return false;\n'.format(intType)
-                    gen += '                {0}.{1}.limit = value.as{2}();\n'.format(structVar, member.name, intType)
-                elif member.type in self.registry.structs:
-                    nestedStructDef = self.registry.structs[member.type]
-                    gen += '                if (!value.isObject()) return false;\n'
-                    for nestedMember in nestedStructDef.members.values():
-                        gen += '                if (value.isMember("{0}")) {{\n'.format(nestedMember.name)
-                        gen += '                    const Json::Value &nested_value = value["{0}"];\n'.format(nestedMember.name)
-                        if nestedMember.type in self.registry.enums:
-                            gen += '                    if (!nested_value.isString()) return false;\n'
-                            gen += '                    {0}.{1}.{2}.limit = static_cast<{3}>(VkStringToUint64(nested_value.asString()));\n'.format(structVar, member.name, nestedMember.name, nestedMember.type)
-                        elif nestedMember.type in self.int_to_json_type_map:
-                            intType = self.int_to_json_type_map[nestedMember.type]
-                            gen += '                    if (!nested_value.is{0}()) return false;\n'.format(intType)
-                            gen += '                    {0}.{1}.{2}.limit = nested_value.as{3}();\n'.format(structVar, member.name, nestedMember.name, intType)
-                        else:
-                            gen += '#error Unsupported video profile format type "{0}" in "{1}::{2}::{3}"\n'.format(nestedMember.type, struct, member.name, nestedMember.name)
-                        gen += '                }\n'
-                else:
-                    gen += '#error Unsupported video profile format type "{0}" in "{1}::{2}"\n'.format(member.type, struct, member.name)
+                gen += self.generate_video_limit_struct_member_parser(' ' * 16, 'value', structVar, struct, member)
                 gen += '            }\n'
             gen += '        }\n'
             gen += self.generate_platform_protect_end(struct)
@@ -5645,6 +5661,10 @@ class VulkanProfilesLayerGenerator():
             var_name += 'ext_'
         if (var_name == 'physical_device_ray_tracing_invocation_reorder_properties_' and nv):
             var_name += 'nv_'
+        if (var_name == 'physical_device_ray_tracing_invocation_reorder_features_' and nv):
+            var_name += 'nv_'
+        if (var_name == 'physical_device_fault_features_' and ext):
+            var_name += 'ext_'
         return var_name
 
     def get_limittype_class(self, limittype):

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2021-2025 Valve Corporation
- * Copyright (c) 2021-2025 LunarG, Inc.
+ * Copyright (c) 2021-2026 Valve Corporation
+ * Copyright (c) 2021-2026 LunarG, Inc.
  * Copyright (c) 2024 RasterGrid Kft.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@
 
 #include "mock_vulkan_api.hpp"
 #include <vulkan/vulkan_android.h>
-#include <vulkan/vulkan_profiles.hpp>
+#include "generated_vulkan_profiles.hpp"
 
 static void initInstanceExtensions(const VpProfileProperties& profile, std::vector<VkExtensionProperties>& properties,
                                    std::vector<const char*>& outExtensions) {

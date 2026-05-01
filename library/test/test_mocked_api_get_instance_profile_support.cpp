@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2021-2025 Valve Corporation
- * Copyright (c) 2021-2025 LunarG, Inc.
+ * Copyright (c) 2021-2026 Valve Corporation
+ * Copyright (c) 2021-2026 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@
 #include <vulkan/vulkan_android.h>
 
 #ifdef WITH_DEBUG_MESSAGES
-#include <vulkan/debug/vulkan_profiles.hpp>
+#include "generated_vulkan_profiles_debug.hpp"
 #else
-#include <vulkan/vulkan_profiles.hpp>
+#include "generated_vulkan_profiles.hpp"
 #endif
 
 TEST(mocked_api_get_instance_profile_support, vulkan10_supported) {

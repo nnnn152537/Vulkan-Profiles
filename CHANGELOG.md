@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD041 -->
 <p align="left"><img src="https://vulkan.lunarg.com/img/NewLunarGLogoBlack.png" alt="LunarG" width="263" height="113" /></p>
-<p align="left">Copyright © 2015-2025 LunarG, Inc.</p>
+<p align="left">Copyright © 2015-2026 LunarG, Inc.</p>
 
 [![Creative Commons][3]][4]
 
@@ -11,7 +11,29 @@
 
 # Release Notes
 
-## [Vulkan Profiles Tools 1.4.XXX](https://github.com/KhronosGroup/Vulkan-Profiles/tree/main) - October 2025
+## [Vulkan Profiles Tools 1.4.350](https://github.com/KhronosGroup/Vulkan-Profiles/tree/sdk-1.4.350.0) - May 2026
+
+### Features:
+- Add Vulkan 1.4 minimum requirements profile
+
+### Bugfixes:
+- Fix Vulkan Profiles library crash when checking capabilities of unsupported extensions
+
+## [Vulkan Profiles Tools 1.4.341](https://github.com/KhronosGroup/Vulkan-Profiles/tree/sdk-1.4.341.0) - February 2026
+
+### Features:
+- Add VP_ANDROID_17_requirements and VP_ANDROID_vulkan_profile_2025 profiles
+- Add Android Rebranded profiles
+
+### Deprecation:
+- Remove layer forced physical device, replaced by the Vulkan loader settings and Vulkan Configurator Vulkan Drivers tab
+
+## [Vulkan Profiles Tools 1.4.335](https://github.com/KhronosGroup/Vulkan-Profiles/tree/sdk-1.4.335.0) - October 2025
+
+### Improvements:
+- Trivial Vulkan Header update release
+
+## [Vulkan Profiles Tools 1.4.328](https://github.com/KhronosGroup/Vulkan-Profiles/tree/sdk-1.4.328.0) - October 2025
 
 ### Deprecation:
 - Deprecate layer forced physical device, replaced by the Vulkan loader settings and Vulkan Configurator Vulkan Drivers tab
